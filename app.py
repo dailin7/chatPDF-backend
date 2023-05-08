@@ -1,4 +1,3 @@
-#TODO: delete unused packages
 import streamlit as st
 from streamlit.components.v1 import html
 from streamlit_chat import message
@@ -8,7 +7,6 @@ from langchain.document_loaders import TextLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import DeepLake
-from langchain.chains import RetrievalQA
 import os
 from dotenv import load_dotenv
 
@@ -28,10 +26,8 @@ def load_env():
 #TODO
 # take a deeper look at this part
 # how to process a pdf file(embedding model)
-# what llm/db to use for a chain
-# how to set up a good chain
 @st.cache_resource
-def load_chain():
+def constrtcut_db():
     #load and split input files
     loader = TextLoader("/Users/dailin/Desktop/chatPDF/test_date/sample.txt")
     documents = loader.load()
@@ -41,16 +37,12 @@ def load_chain():
     #embed the input files and load it to DB
     embeddings = OpenAIEmbeddings(openai_api_key=env["OPEN_AI_KEY"])
     db = DeepLake.from_documents(texts, embeddings, overwrite=True)
+    return db
 
-    #construct a retriever of the constructed DB, with customized params
-    db = DeepLake(read_only=True, embedding_function=embeddings)
-    retriever = db.as_retriever()
-    retriever.search_kwargs['distance_metric'] = 'cos'
-    retriever.search_kwargs['k'] = 4
-
-    #construct a chain for answering questions
-    qa = RetrievalQA.from_chain_type(llm=OpenAI(openai_api_key=env["OPEN_AI_KEY"]), chain_type="stuff", retriever=retriever, return_source_documents=False)
-    return qa
+@st.cache_resource
+def load_chain():
+    chain = load_qa_chain(OpenAI(temperature=0), chain_type="map_reduce")
+    return chain
 
 def init_conversation():
     if 'hist_questions' not in st.session_state:
@@ -61,10 +53,13 @@ def init_conversation():
 
 #TODO should the answer also be added into the DB or the llm for better context and thus better performance in long term?
 def ask_and_answer():
-    question = st.text_input(label = 'Type in your question', value='')
+    db = constrtcut_db()
+    qa = load_chain()
+    question = st.text_input(label = 'Type in your question', value=None)
 
     if question:
-        ans = qa({"query": question})
+        docs = db.get_relevant_documents(question)
+        ans = qa({"input_documents": docs, "question": question}, return_only_outputs=True)
         st.session_state['hist_questions'].append(question)
         st.session_state['hist_responses'].append(ans)
 
@@ -76,7 +71,6 @@ def show_conversation():
 
 env = load_env()
 init_conversation()
-qa = load_chain()
 ask_and_answer()
 show_conversation()
 
