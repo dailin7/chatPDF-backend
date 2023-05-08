@@ -1,6 +1,4 @@
 openai
-streamlit
-streamlit_chat
 pandas
 langchain
 deeplake
