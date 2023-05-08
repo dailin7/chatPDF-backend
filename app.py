@@ -5,7 +5,6 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import DeepLake
 from langchain.chains import RetrievalQA
-
 import os
 from dotenv import load_dotenv
 
@@ -35,10 +34,22 @@ def load_chain():
 
     return qa
 
+def ask_and_answer():
+    print("Type exit to quite")
+    print("-"*30)
+    while (True):
+        question = input("You: ")
+        if (question == "exit"):
+            break
+        
+        answer = qa.run(question)
+        print("Chatbot: " + answer + "\n")
+    print("program terminated by user")
 
 env = load_env()
 qa = load_chain()
-print(qa.run('what is babyAGI'))
+ask_and_answer()
+
 
 
 
