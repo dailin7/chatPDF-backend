@@ -29,7 +29,7 @@ def load_env():
 @st.cache_resource
 def constrtcut_db():
     #load and split input files
-    loader = TextLoader("/Users/dailin/Desktop/chatPDF/test_date/sample.txt")
+    loader = TextLoader("../chatPDF/test_date/sample.txt")
     documents = loader.load()
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     texts = text_splitter.split_documents(documents)
