@@ -4,3 +4,5 @@ streamlit_chat
 pandas
 langchain
 deeplake
+python-dotenv
+tiktoken
