@@ -1,11 +1,13 @@
 from langchain.llms import OpenAI
 from langchain.chains.question_answering import load_qa_chain
-from langchain.document_loaders import TextLoader
+from langchain.document_loaders import TextLoader, PyPDFLoader, UnstructuredPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import DeepLake
 from langchain.chains import RetrievalQA
-import os
+from langchain.docstore.document import Document
+
+import glob, os
 from dotenv import load_dotenv
 
 def load_env():
@@ -13,16 +15,21 @@ def load_env():
     OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
     return {"OPEN_AI_KEY": OPEN_AI_KEY}
 
-#TODO
-# take a deeper look at this part
-# how to process a pdf file(embedding model)
+#TODO: fine-tune the parameters of loader and splitter
+def load_pdf():
+    pages = []
+    for file in glob.glob("test_data/*.pdf"):
+        loader = UnstructuredPDFLoader(file)
+        pages+=loader.load_and_split()
+    return pages
+    
+#TODO: implement the method
+def generate_prompt():
+    return None
 
+#TODO: fine-tune the parameters of chain, embedding model, llm, and db
 def load_chain():
-    #load and split input files
-    loader = TextLoader("../chatPDF/test_date/sample.txt")
-    documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-    texts = text_splitter.split_documents(documents)
+    texts = load_pdf()
 
     #embed the input files and load it to DB
     embeddings = OpenAIEmbeddings(openai_api_key=env["OPEN_AI_KEY"])
