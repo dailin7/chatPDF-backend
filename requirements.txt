@@ -1,6 +1,6 @@
 openai
 pandas
 langchain
-deeplake
 python-dotenv
 tiktoken
+qdrant_client
