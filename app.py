@@ -7,6 +7,7 @@ from langchain.vectorstores import Qdrant
 from langchain.chains import RetrievalQA
 from langchain.docstore.document import Document
 import glob, os
+import qdrant_client
 from dotenv import load_dotenv
 
 def load_env():
