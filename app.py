@@ -4,7 +4,9 @@ from langchain.document_loaders import TextLoader, PyPDFLoader, UnstructuredPDFL
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Qdrant
-from langchain.chains import RetrievalQA
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import RetrievalQA,ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
 from langchain.docstore.document import Document
 import glob, os
 import qdrant_client
@@ -50,8 +52,9 @@ def load_chain():
         )
 
     #construct a qa chain with customized llm and db
-    chain = load_qa_chain(OpenAI(model_name="text-davinci-003", openai_api_key=env["OPEN_AI_KEY"], temperature=0), chain_type="map_reduce")
-    qa = RetrievalQA(combine_documents_chain=chain, retriever=qdrant.as_retriever())
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    #chain = load_qa_chain(OpenAI(model_name="text-ada-001", openai_api_key=env["OPEN_AI_KEY"], temperature=0), chain_type="map_reduce")
+    qa =ConversationalRetrievalChain.from_llm(ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=env["OPEN_AI_KEY"], temperature=0), qdrant.as_retriever(), memory=memory)
 
     return qa
 

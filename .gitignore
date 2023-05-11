@@ -3,3 +3,4 @@ data/
 deeplake/
 qdrant_storage/
 Pipfile
+test_data/

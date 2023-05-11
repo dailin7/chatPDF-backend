@@ -4,3 +4,9 @@ langchain
 python-dotenv
 tiktoken
 qdrant_client
+streamlit
+streamlit_chat
+unstructured
+pdf2image
+pytesseract
+poppler-utils
