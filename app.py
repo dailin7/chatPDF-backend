@@ -8,6 +8,8 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA,ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain.docstore.document import Document
+import streamlit as st
+from streamlit_chat import message
 import glob, os
 import qdrant_client
 from dotenv import load_dotenv
@@ -30,6 +32,7 @@ def generate_prompt():
     return None
 
 #TODO: fine-tune the parameters of chain, embedding model, llm, and db
+@st.cache_resource
 def load_chain():
     embeddings = OpenAIEmbeddings(openai_api_key=env["OPEN_AI_KEY"])
     if(not os.path.exists("../chatPDF/data/local_qdrant/collection/my_documents")):
@@ -54,7 +57,7 @@ def load_chain():
     #construct a qa chain with customized llm and db
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     #chain = load_qa_chain(OpenAI(model_name="text-ada-001", openai_api_key=env["OPEN_AI_KEY"], temperature=0), chain_type="map_reduce")
-    qa =ConversationalRetrievalChain.from_llm(ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=env["OPEN_AI_KEY"], temperature=0), qdrant.as_retriever(), memory=memory)
+    qa =ConversationalRetrievalChain.from_llm(ChatOpenAI(openai_api_key=env["OPEN_AI_KEY"], temperature=0), qdrant.as_retriever(), memory=memory)
 
     return qa
 
@@ -66,14 +69,41 @@ def ask_and_answer():
         if (question == "exit"):
             break
         
-        answer = qa.run(question)
-        print("Chatbot: " + answer + "\n")
+        answer =  chain({"question": question})
+        print("Chatbot: " + answer['answer'] + "\n")
     print("program terminated by user")
 
 env = load_env()
-qa = load_chain()
-ask_and_answer()
+chain= load_chain()
+# ask_and_answer()
 
 
+#st.set_page_config(page_title="LangChain Demo", page_icon=":robot:")
+st.header("LangChain Demo")
 
+if "generated" not in st.session_state:
+    st.session_state["generated"] = []
+
+if "past" not in st.session_state:
+    st.session_state["past"] = []
+
+
+def get_text():
+    input_text = st.text_input("You: ", "Hello, how are you?", key="input")
+    return input_text
+
+
+user_input = get_text()
+
+if user_input:
+    output = chain({"question": user_input})
+
+    st.session_state.past.append(user_input)
+    st.session_state.generated.append(output['answer'])
+
+if st.session_state["generated"]:
+
+    for i in range(len(st.session_state["generated"]) - 1, -1, -1):
+        message(st.session_state["generated"][i], key=str(i))
+        message(st.session_state["past"][i], is_user=True, key=str(i) + "_user")
 
