@@ -1,5 +1,7 @@
 from langchain.llms import OpenAI
-from langchain.chains.question_answering import load_qa_chain
+from langchain.chains import LLMChain
+from langchain.chains.conversational_retrieval.prompts import CONDENSE_QUESTION_PROMPT
+from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 from langchain.document_loaders import TextLoader, PyPDFLoader, UnstructuredPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
@@ -55,9 +57,19 @@ def load_chain():
         )
 
     #construct a qa chain with customized llm and db
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    memory = ConversationBufferMemory(
+        memory_key='chat_history', return_messages=True, output_key='answer')
     #chain = load_qa_chain(OpenAI(model_name="text-ada-001", openai_api_key=env["OPEN_AI_KEY"], temperature=0), chain_type="map_reduce")
-    qa =ConversationalRetrievalChain.from_llm(ChatOpenAI(openai_api_key=env["OPEN_AI_KEY"], temperature=0), qdrant.as_retriever(), memory=memory)
+    qa =ConversationalRetrievalChain.from_llm(ChatOpenAI(openai_api_key=env["OPEN_AI_KEY"], temperature=0), qdrant.as_retriever(), memory =  memory, return_source_documents=True)
+    # llm = ChatOpenAI(openai_api_key=env["OPEN_AI_KEY"], temperature=0)
+    # question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
+    # doc_chain = load_qa_with_sources_chain(llm, chain_type="map_reduce")
+    # chain = ConversationalRetrievalChain(
+    # retriever=qdrant.as_retriever(),
+    # question_generator=question_generator,
+    # combine_docs_chain=doc_chain,
+    # memory=memory
+    # )
 
     return qa
 
@@ -97,10 +109,12 @@ user_input = get_text()
 
 if user_input:
     output = chain({"question": user_input})
-
     st.session_state.past.append(user_input)
-    st.session_state.generated.append(output['answer'])
-
+    #output['answer'] + '\n' +
+    st.session_state.generated.append(output['answer'] + '\n'  + 
+        '----------------------------- SOURCRE -----------------------'+ '\n'
+        + " ".join(set([x.metadata['source'] for x in output['source_documents']])))
+    #output['source_documents']
 if st.session_state["generated"]:
 
     for i in range(len(st.session_state["generated"]) - 1, -1, -1):
