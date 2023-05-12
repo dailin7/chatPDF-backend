@@ -4,3 +4,4 @@ deeplake/
 qdrant_storage/
 Pipfile
 test_data/
+detectron2/
