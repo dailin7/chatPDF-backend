@@ -10,6 +10,8 @@ from multiprocessing import Pool, Manager
 import glob, os, qdrant_client, time, random, multiprocessing
 import pdf_loader 
 from dotenv import load_dotenv
+import concurrent.futures
+
 
 '''
 load env variables from .env file
@@ -19,6 +21,28 @@ def load_env():
     OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
     return {"OPEN_AI_KEY": OPEN_AI_KEY}
 
+def load_pdf_1(file):
+    try:
+        loader = UnstructuredPDFLoader(file)
+        page = loader.load_and_split()
+        return page
+    except Exception as e:
+        print(f"PDF file {file} loading failed due to error: {e}")
+
+def load_all_pdf_1():
+    files = list()
+    for file in glob.glob("test_data/*.pdf"):
+            files.append(file)
+
+    p = Pool(int(os.cpu_count()/2))
+
+    pages = p.map(load_pdf_1, files)
+    p.close()
+
+    # Flatten the list of lists into a single list
+    pages = [string for sublist in pages for string in sublist]
+    return pages
+
 '''
 generate prompts for llm
 '''
@@ -26,7 +50,7 @@ generate prompts for llm
 def generate_prompt():
     return None
 
-#TODO: fine-tune the parameters of chain, embedding model, llm, and db
+#TODO: fine-tune the parameters of chain, embedding model, llm(question generator/prompt), and db
 def load_chain():
     embeddings = OpenAIEmbeddings(openai_api_key=env["OPEN_AI_KEY"])
     if(not os.path.exists("../chatPDF/data/local_qdrant/collection/my_documents")):
@@ -49,9 +73,9 @@ def load_chain():
         )
 
     #construct a qa chain with customized llm and db
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key="answer")
     #chain = load_qa_chain(OpenAI(model_name="text-ada-001", openai_api_key=env["OPEN_AI_KEY"], temperature=0), chain_type="map_reduce")
-    qa = ConversationalRetrievalChain.from_llm(ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=env["OPEN_AI_KEY"], temperature=0), qdrant.as_retriever(), memory=memory)
+    qa = ConversationalRetrievalChain.from_llm(ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=env["OPEN_AI_KEY"], temperature=0), qdrant.as_retriever(), memory=memory, return_source_documents=True)
 
     return qa
 
@@ -65,48 +89,22 @@ def ask_and_answer():
         if (question == "exit"):
             break
         
-        answer = qa.run(question)
-        print("Chatbot: " + answer + "\n")
+        # answer = qa.run(question)
+        answer = qa({"question": question})
+        # print(answer['answer'] + '\n')
+        print(answer)
+
+        # print("Chatbot: " + answer['answer'] + "\n")
     print("program terminated by user")
 
-def load_pdf(i, files, lock, pages):
-    try:
-        loader = UnstructuredPDFLoader(files[i])
-        lock.acquire()
-        page=loader.load_and_split()
-        pages.extend(page)
-        lock.release()
-    except Exception as e:
-        print(f"PDF file {files[i]} loading failed due to error: {e}")
-
-'''
-load local pdfs and split them
-'''
-#TODO: fine-tune the parameters of loader and splitter
-def load_all_pdfs():
-    pages = Manager().list()
-    files = Manager().dict()
-    lock = Manager().Lock()
-    index = 0
-
-    for file in glob.glob("test_data/*.pdf"):
-        files[index] = file
-        index+=1
-
-    p = Pool(len(files))
-
-    for i in range(len(files)):
-        p.apply_async(load_pdf, args=(i, files, lock, pages))
-
-    p.close()
-    p.join()
-
-    return(list(pages))
-
+env = load_env()
 if __name__=='__main__':
-    env = load_env()
-    pages = load_all_pdfs()
+    start = time.time()
+    pages = load_all_pdf_1()
+    print(int(time.time() - start))
     ask_and_answer()
+
+
 
 
 
