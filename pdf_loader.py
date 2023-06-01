@@ -7,11 +7,6 @@ import concurrent.futures
 #1: multiprocess(multiprocessing.Pool)
 #2: multiprocess(concurrent.futures.Executor)
 #3: linear process
-def load_env():
-    load_dotenv()
-    OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
-    return {"OPEN_AI_KEY": OPEN_AI_KEY}
-
 def load_pdf_1(file):
     try:
         loader = UnstructuredPDFLoader(file)
