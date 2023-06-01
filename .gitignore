@@ -5,4 +5,4 @@ qdrant_storage/
 Pipfile
 test_data/
 detectron2/
-
+__pycache__/
