@@ -6,3 +6,4 @@ Pipfile
 test_data/
 detectron2/
 __pycache__/
+backend/backend/__pycache__/
