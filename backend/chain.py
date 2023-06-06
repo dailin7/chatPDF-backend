@@ -12,6 +12,7 @@ class Chain:
     qa: ConversationalRetrievalChain
     sources: Sources
 
+
     def load_env(self):
         load_dotenv()
         OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
@@ -21,7 +22,8 @@ class Chain:
         self.load_env()
         embeddings = OpenAIEmbeddings(openai_api_key=self.env["OPEN_AI_KEY"])
         if(not os.path.exists("backend/data/local_qdrant/collection/my_documents")):
-            #load and split input files        
+            #load and split input files    
+            self.sources = Sources()    
             self.sources.load_all_pdf_3()
             
             #embed the input files and load it to DB
