@@ -7,6 +7,10 @@ chain = Chain()
 chain.load_chain()
 
 @api_view(["POST"])
+def hello(request):
+    return Response("Hello World")
+
+@api_view(["POST"])
 def query(request):
     try:
         query = request.data["query"]
