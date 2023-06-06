@@ -6,12 +6,13 @@ from rest_framework import status
 chain = Chain()
 chain.load_chain()
 
-@api_view(["GET"])
+@api_view(["POST"])
 def query(request):
     try:
-        question = request.data["query"]
-        answer = chain.qa({"question": question})
-        return Response(answer, status=status.HTTP_200_OK)
+        query = request.data["query"]
+        answer = chain.qa({"question": query})
+        print(answer["answer"])
+        return Response(answer["answer"], status=status.HTTP_200_OK, headers={"Access-Control-Allow-Origin": "*"},)
     except:
         return Response(request.data, status=status.HTTP_400_BAD_REQUEST)
     

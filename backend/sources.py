@@ -3,8 +3,10 @@ import glob
 
 class Sources:
     texts: list
+    
 
     def load_all_pdf_3(self):
+        self.texts = list()
         for file in glob.glob("backend/test_data/*.pdf"):
             loader = UnstructuredPDFLoader(file)
             self.texts+=loader.load_and_split()
