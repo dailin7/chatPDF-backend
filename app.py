@@ -134,22 +134,23 @@ def text_to_docs(text: str, file_name: str, chunk_size: int) -> List[Document]:
             doc_chunks.append(doc)
     return doc_chunks
 
+
 @st.cache_resource
 def upsert_documents_to_qdrant(
     path: str,
     collection_name: str = "my_documents",
 ):
     embeddings = OpenAIEmbeddings(openai_api_key=api)
-    client = QdrantClient(path=path)
-    client.upsert
+    # client = QdrantClient(path=path)
+    # client.upsert
     qdrant = Qdrant.from_documents(
         pages,
         embeddings,
         path=path,
         collection_name=collection_name,
     )
-   
-    client = QdrantClient(path=path)
+
+    # client = QdrantClient(path=path)
 
     # qdrant = Qdrant(
     #     client=client, collection_name=collection_name, embeddings=embeddings
@@ -200,8 +201,6 @@ def format_source(source_documents: List[Document]):
         res += f'   page: {doc.metadata["source"]} \n'
         res += f"   content: {doc.page_content} \n"
     return res
-
-
 
 
 # ask_and_answer()
