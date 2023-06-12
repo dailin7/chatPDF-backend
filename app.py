@@ -1,7 +1,10 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from io import BytesIO
 import re
 import logging
+import docx2txt
+import fitz
+from hashlib import md5
 
 from langchain.llms import OpenAI
 from langchain.chains import LLMChain
@@ -13,6 +16,7 @@ from langchain.text_splitter import (
     CharacterTextSplitter,
     RecursiveCharacterTextSplitter,
 )
+from langchain.agents import AgentExecutor, Tool, ZeroShotAgent
 from langchain.vectorstores import Qdrant
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA, ConversationalRetrievalChain
@@ -21,59 +25,60 @@ from langchain.docstore.document import Document
 import streamlit as st
 from streamlit_chat import message
 import glob, os
-import qdrant_client
+from qdrant_client import QdrantClient
 from dotenv import load_dotenv
 from pypdf import PdfReader
 
 
-def load_env():
-    load_dotenv()
-    OPEN_AI_KEY = os.getenv("OPEN_AI_KEY")
-    return {"OPEN_AI_KEY": OPEN_AI_KEY}
-
-
-def handle_file(file):
-    filename = file.filename
-    logging.info("[handle_file] Handling file: {}".format(filename))
-
-    try:
-        extracted_text = extract_text_from_file(file)
-    except ValueError as e:
-        logging.error("[handle_file] Error extracting text from file: {}".format(e))
-        raise e
-
-
-def extract_text_from_file(file):
-    """Return the text content of a file."""
-    pass
-
-
-# TODO: fine-tune the parameters of loader and splitter
-def load_pdf():
+@st.cache_data
+def load_files(files) -> List[Document]:
     pages = []
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=20,
-        length_function=len,
-        separators=[" ", ",", "\n"],
-    )
-    for file in glob.glob("test_data/*.pdf"):
-        # loader = UnstructuredPDFLoader(file)
-        # pages += loader.load_and_split(text_splitter=text_splitter)
-        # get file name for file
-        file_name = file.split("/")[-1].split(".")[0]
-        pdf = parse_pdf(file)
-        loader = text_to_docs(pdf, file_name)
-        pages += loader
+    for file in files:
+        filetype = file.type
+        if filetype == "application/pdf":
+            pages += load_pdf(file)
+        elif (
+            filetype
+            == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ):
+            pages += load_docx(file)
+        elif filetype == "text/plain":
+            pages += load_txt(file)
+        else:
+            raise ValueError(f"File type {filetype} not supported")
+
     return pages
 
 
-# @st.cache_data
+@st.cache_data
+def load_pdf(file):
+    pdf = parse_pdf(file)
+    loader = text_to_docs(pdf, file.name, 3000)
+    return loader
+
+
+@st.cache_data
+def load_docx(file):
+    extracted_text = docx2txt.process(file)
+    txt = parse_txt(extracted_text)
+    loader = text_to_docs(txt, file.name, 1000)
+    return loader
+
+
+@st.cache_data
+def load_txt(file):
+    txt = parse_txt(file)
+    loader = text_to_docs(txt, file.name, 1000)
+    return loader
+
+
+@st.cache_data
 def parse_pdf(file: BytesIO) -> List[str]:
-    pdf = PdfReader(file)
+    logging.info(type(file))
+    pdf = fitz.open(stream=file.read(), filetype="pdf")
     output = []
-    for page in pdf.pages:
-        text = page.extract_text()
+    for page in pdf:
+        text = page.get_text()
         # Merge hyphenated words
         text = re.sub(r"(\w+)-\n(\w+)", r"\1\2", text)
         # Fix newlines in the middle of sentences
@@ -84,8 +89,19 @@ def parse_pdf(file: BytesIO) -> List[str]:
     return output
 
 
-# @st.cache_data
-def text_to_docs(text: str, file_name: str) -> List[Document]:
+@st.cache_data
+def parse_txt(extracted_text: BytesIO) -> List[str]:
+    extracted_text = re.sub(r"(\w+)-\n(\w+)", r"\1\2", extracted_text)
+    # Fix newlines in the middle of sentences
+    extracted_text = re.sub(r"(?<!\n\s)\n(?!\s\n)", " ", extracted_text)
+    # Remove multiple newlines
+    extracted_text = re.sub(r"\n\s*\n", "\n\n", extracted_text)
+
+    return extracted_text
+
+
+@st.cache_data
+def text_to_docs(text: str, file_name: str, chunk_size: int) -> List[Document]:
     """Converts a string or list of strings to a list of Documents
     with metadata."""
     if isinstance(text, str):
@@ -102,7 +118,7 @@ def text_to_docs(text: str, file_name: str) -> List[Document]:
 
     for doc in page_docs:
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=4000,
+            chunk_size=chunk_size,
             separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],
             chunk_overlap=0,
         )
@@ -118,42 +134,48 @@ def text_to_docs(text: str, file_name: str) -> List[Document]:
             doc_chunks.append(doc)
     return doc_chunks
 
+@st.cache_resource
+def upsert_documents_to_qdrant(
+    path: str,
+    collection_name: str = "my_documents",
+):
+    embeddings = OpenAIEmbeddings(openai_api_key=api)
+    client = QdrantClient(path=path)
+    client.upsert
+    qdrant = Qdrant.from_documents(
+        pages,
+        embeddings,
+        path=path,
+        collection_name=collection_name,
+    )
+   
+    client = QdrantClient(path=path)
 
-# TODO: implement the method
-def generate_prompt():
-    return None
+    # qdrant = Qdrant(
+    #     client=client, collection_name=collection_name, embeddings=embeddings
+    # )
+
+    # texts = [x.page_content for x in pages]
+    # metadata = [x.metadata for x in pages]
+    # print(texts[0])
+    # print("\n")
+    # print(metadata[0])
+    # qdrant.add_texts(
+    #     texts=[x.page_content for x in pages], metadatas=[x.metadata for x in pages]
+    # )
+    return qdrant
 
 
 # TODO: fine-tune the parameters of chain, embedding model, llm, and db
-# @st.cache_resource
+@st.cache_resource
 def load_chain():
-    embeddings = OpenAIEmbeddings(openai_api_key=env["OPEN_AI_KEY"])
-    if not os.path.exists("../chatPDF/data/local_qdrant/collection/my_documents"):
-        # load and split input files
-        texts = load_pdf()
-
-        # embed the input files and load it to DB
-        qdrant = Qdrant.from_documents(
-            texts,
-            embeddings,
-            path="../chatPDF/data/local_qdrant",
-            collection_name="my_documents",
-        )
-    else:
-        client = qdrant_client.QdrantClient(
-            path="../chatPDF/data/local_qdrant",
-        )
-        qdrant = Qdrant(
-            client=client, collection_name="my_documents", embeddings=embeddings
-        )
-
     # construct a qa chain with customized llm and db
     memory = ConversationBufferMemory(
         memory_key="chat_history", return_messages=True, output_key="answer"
     )
     # chain = load_qa_chain(OpenAI(model_name="text-ada-001", openai_api_key=env["OPEN_AI_KEY"], temperature=0), chain_type="map_reduce")
     qa = ConversationalRetrievalChain.from_llm(
-        ChatOpenAI(openai_api_key=env["OPEN_AI_KEY"], temperature=0),
+        ChatOpenAI(openai_api_key=api, temperature=0),
         qdrant.as_retriever(),
         memory=memory,
         return_source_documents=True,
@@ -171,27 +193,18 @@ def load_chain():
     return qa
 
 
-def ask_and_answer():
-    print("Type exit to quite")
-    print("-" * 30)
-    while True:
-        question = input("You: ")
-        if question == "exit":
-            break
-
-        answer = chain({"question": question})
-        print("Chatbot: " + answer["answer"] + "\n")
-        print(
-            "------------------------------SOURCE-----------------------------" + "\n"
-        )
-        print(answer["source_documents"])
-
-    print("program terminated by user")
+def format_source(source_documents: List[Document]):
+    res = ""
+    for i, doc in enumerate(source_documents):
+        res += f"source {i + 1} \n"
+        res += f'   page: {doc.metadata["source"]} \n'
+        res += f"   content: {doc.page_content} \n"
+    return res
 
 
-env = load_env()
-chain = load_chain()
-ask_and_answer()
+
+
+# ask_and_answer()
 
 
 # # st.set_page_config(page_title="LangChain Demo", page_icon=":robot:")
@@ -227,3 +240,87 @@ ask_and_answer()
 #     for i in range(len(st.session_state["generated"]) - 1, -1, -1):
 #         message(st.session_state["generated"][i], key=str(i))
 #         message(st.session_state["past"][i], is_user=True, key=str(i) + "_user")
+st.title("🤖 Personalized Bot with Memory 🧠 ")
+st.markdown(
+    """ 
+        ####  🗨️ Chat with your PDF files 📜 with `Conversational Buffer Memory`  
+        ----
+        """
+)
+
+
+# Set up the sidebar
+st.sidebar.markdown(
+    """
+    ### Steps:
+    1. Upload PDF File
+    2. Enter Your Secret Key for Embeddings
+    3. Perform Q&A
+
+    **Note : File content and API key not stored in any form.**
+    """
+)
+
+uploaded_file = st.file_uploader(
+    "**Upload Your Files**", type=["pdf", "docx", "txt"], accept_multiple_files=True
+)
+path = "../chatPDF/data/local_qdrant"
+collection_name = "my_documents"
+if uploaded_file:
+    pages = load_files(uploaded_file)
+    api = st.text_input(
+        "**Enter OpenAI API Key**",
+        type="password",
+        placeholder="sk-",
+        help="https://platform.openai.com/account/api-keys",
+    )
+    if api:
+        qdrant = upsert_documents_to_qdrant(
+            path=path,
+            collection_name=collection_name,
+        )
+
+        qa = load_chain()
+        # qa = RetrievalQA.from_chain_type(
+        #     llm=OpenAI(openai_api_key=api),
+        #     chain_type="map_reduce",
+        #     retriever=qdrant.as_retriever(),
+        # )
+        # Set up the conversational agent
+
+        if "generated" not in st.session_state:
+            st.session_state["generated"] = []
+
+        if "past" not in st.session_state:
+            st.session_state["past"] = []
+
+        # Allow the user to enter a query and generate a response
+        query = st.text_input(
+            "**What's on your mind?**",
+            placeholder="Ask me anything from {}".format(collection_name),
+        )
+
+        if query:
+            # with st.spinner("Generating Answer to your Query : `{}` ".format(query)):
+            res = qa({"question": query})
+            print(res)
+            st.session_state.past.append(query)
+            st.session_state.generated.append(
+                res["answer"]
+                + "\n"
+                + "----------------------------- SOURCRE -----------------------"
+                + "\n"
+                + format_source(res["source_documents"])
+                # + res["source_documents"][0].metadata["source"]
+            )
+            # st.info(res, icon="🤖")
+        if st.session_state["generated"]:
+            for i in range(len(st.session_state["generated"]) - 1, -1, -1):
+                message(st.session_state["generated"][i], key=str(i))
+                message(st.session_state["past"][i], is_user=True, key=str(i) + "_user")
+        # Allow the user to view the conversation history and other information stored in the agent's memory
+
+    # output['source_documents']
+
+with st.sidebar:
+    st.markdown("Shanghai Artificial Intelligence Research Institute Co., Ltd.")

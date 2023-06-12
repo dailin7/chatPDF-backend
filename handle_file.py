@@ -22,7 +22,7 @@ def extract_text_from_file(file):
 
     # get extension of a file
     extension = file.split(".")[-1]
-    extracted_text - ""
+    extracted_text = ""
 
     if extension == "pdf":
         doc = fitz.open(file)
