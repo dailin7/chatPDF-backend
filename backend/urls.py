@@ -17,9 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from backend import views
+from backend.vectorDB import collection
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("query/", views.query),
     path("hello/", views.hello),
+    path("collection/create", collection.create_collection),
+    path("collection/", collection.get_collections),
+    path("collection/<str:collection_name>", collection.get_collection),
 ]
