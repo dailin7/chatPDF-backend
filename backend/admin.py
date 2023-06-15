@@ -1,4 +1,4 @@
 from django.contrib import admin
-from .models import Drink
+from .models.models import Drink
 
 admin.site.register(Drink)
