@@ -3,8 +3,8 @@ from io import BytesIO
 import os
 import logging
 import re
-
-
+from backend.sources import qdrant_client, embedding
+from langchain.vectorstores import Qdrant
 import docx2txt
 import fitz
 from hashlib import md5
@@ -21,7 +21,7 @@ from .sources import qdrant_client
 def load_files(files) -> List[Document]:
     pages = []
     for file in files:
-        filetype = file.type
+        filetype = file.content_type
         if filetype == "application/pdf":
             pages += load_pdf(file)
         elif (
@@ -116,31 +116,36 @@ def text_to_docs(text: str, file_name: str, chunk_size: int) -> List[Document]:
     return doc_chunks
 
 
+CONTENT_KEY = "page_content"
+METADATA_KEY = "metadata"
+
+
 def upsert_documents_to_qdrant(
-    path: str,
+    pages: List[Document],
     collection_name: str = "my_documents",
 ):
-    embeddings = OpenAIEmbeddings(openai_api_key=os.environ["OPENAI_API_KEY"])
-    # client = QdrantClient(path=path)
-    # client.upsert
-    qdrant_client.recreate_collection(
-        collection_name=collection_name,
-    )
+    texts = [x.page_content for x in pages]
+    metadatas = [x.metadata for x in pages]
+    embeddings = embedding.embed_documents(texts)
+    ids = [md5(text.encode("utf-8")).hexdigest() for text in texts]
+    from qdrant_client.http import models as rest
 
-    # client = QdrantClient(path=path)
-
-    # qdrant = Qdrant(
-    #     client=client, collection_name=collection_name, embeddings=embeddings
-    # )
-
-    # texts = [x.page_content for x in pages]
-    # metadata = [x.metadata for x in pages]
-    # print(texts[0])
-    # print("\n")
-    # print(metadata[0])
-    # qdrant.add_texts(
-    #     texts=[x.page_content for x in pages], metadatas=[x.metadata for x in pages]
-    # )
+    try:
+        qdrant_client.upsert(
+            collection_name=collection_name,
+            points=rest.Batch.construct(
+                ids=ids,
+                vectors=embeddings,
+                payloads=Qdrant._build_payloads(
+                    texts=texts,
+                    metadatas=metadatas,
+                    content_payload_key="page_content",
+                    metadata_payload_key="metadata",
+                ),
+            ),
+        )
+    except Exception as e:
+        print(e)
 
 
 def generate_embeddings():

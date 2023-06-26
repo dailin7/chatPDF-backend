@@ -26,4 +26,6 @@ urlpatterns = [
     path("collection/create", collection.create_collection),
     path("collection/", collection.get_collections),
     path("collection/<str:collection_name>", collection.get_collection),
+    path("collection/<str:collection_name>/delete", collection.delete_collection),
+    path("collection/<str:collection_name>/upload", collection.upload_files),
 ]

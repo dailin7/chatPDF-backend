@@ -2,4 +2,4 @@
 VECTOR_DB_PATH: "http://localhost:6333"
 
 # ---- OPENAI CONFIG -----
-OPEN_AI_KEY: ""
+OPEN_AI_KEY: "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"

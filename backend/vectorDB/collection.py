@@ -5,6 +5,7 @@ from backend.sources import qdrant_client
 from qdrant_client.models import Distance, VectorParams
 from ..utils import load_files
 from qdrant_client.http.exceptions import UnexpectedResponse
+from backend.utils import load_files, upsert_documents_to_qdrant
 
 
 @api_view(["POST"])
@@ -13,7 +14,7 @@ def create_collection(request):
         collection_name = request.POST["collection_name"]
         qdrant_client.recreate_collection(
             collection_name=collection_name,
-            vectors_config=VectorParams(size=100, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
         )
         return Response(status=status.HTTP_200_OK)
     except:
@@ -41,4 +42,40 @@ def get_collection(request, collection_name: str):
             status=status.HTTP_400_BAD_REQUEST,
         )
     except:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["DELETE"])
+def delete_collection(request, collection_name: str):
+    try:
+        qdrant_client.delete_collection(collection_name=collection_name)
+        return Response(status=status.HTTP_200_OK)
+    except UnexpectedResponse:
+        return Response(
+            {"message": f"Collection '{collection_name}' does not exists!"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+def upload_files(request, collection_name: str):
+    try:
+        collection = qdrant_client.get_collection(collection_name=collection_name)
+    except UnexpectedResponse:
+        return Response(
+            {"message": f"Collection '{collection_name}' does not exists!"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    files = request.FILES.getlist("files")
+    pages = load_files(files)
+
+    try:
+        upsert_documents_to_qdrant(pages, collection_name=collection_name)
+        return Response(status=status.HTTP_200_OK)
+    except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST)
