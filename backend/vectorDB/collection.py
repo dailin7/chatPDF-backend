@@ -17,7 +17,7 @@ def create_collection(request):
             collection_name=collection_name,
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
         )
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_201_CREATED)
     except:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 

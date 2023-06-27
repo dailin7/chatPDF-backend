@@ -16,16 +16,20 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from backend import views
+from backend.views import hello, user, conversation, collection as db_collection
 from backend.vectorDB import collection
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("query/", views.query),
-    path("hello/", views.hello),
+    path("query/", hello.query),
+    path("hello/", hello.hello),
     path("collection/create", collection.create_collection),
     path("collection/", collection.get_collections),
     path("collection/<str:collection_name>", collection.get_collection),
     path("collection/<str:collection_name>/delete", collection.delete_collection),
     path("collection/<str:collection_name>/upload", collection.upload_files),
+    path("user/create", user.create_user),
+    path("conversation/create", conversation.create_conversation),
+    path("conversation/<str:user_id>", conversation.get_conversations_by_user_id),
+    path("db_collection/create", db_collection.create_collection),
 ]
