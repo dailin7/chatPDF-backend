@@ -1,11 +1,12 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from backend.sources import qdrant_client
+from backend.sources import qdrant_client, embedding
 from qdrant_client.models import Distance, VectorParams
 from ..utils import load_files
 from qdrant_client.http.exceptions import UnexpectedResponse
 from backend.utils import load_files, upsert_documents_to_qdrant
+from langchain.vectorstores import Qdrant
 
 
 @api_view(["POST"])
@@ -62,7 +63,9 @@ def delete_collection(request, collection_name: str):
 @api_view(["POST"])
 def upload_files(request, collection_name: str):
     try:
-        collection = qdrant_client.get_collection(collection_name=collection_name)
+        qdrant = Qdrant(
+            client=qdrant_client, collection_name=collection_name, embeddings=embedding
+        )
     except UnexpectedResponse:
         return Response(
             {"message": f"Collection '{collection_name}' does not exists!"},
@@ -70,9 +73,9 @@ def upload_files(request, collection_name: str):
         )
     except:
         return Response(status=status.HTTP_400_BAD_REQUEST)
-
     files = request.FILES.getlist("files")
     pages = load_files(files)
+    qdrant.add_documents(pages)
 
     try:
         upsert_documents_to_qdrant(pages, collection_name=collection_name)
