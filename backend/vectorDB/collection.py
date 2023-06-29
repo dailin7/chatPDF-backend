@@ -24,7 +24,7 @@ def create_collection(request):
 
 
 @api_view(["GET"])
-def get_collections(request):
+def get_names(request):
     try:
         collection_res = qdrant_client.get_collections()
         res = [x.name for x in collection_res.collections]
@@ -73,14 +73,14 @@ def upload_files(request, collection_name: str):
             {"message": f"Collection '{collection_name}' does not exists!"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    except:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+    
     files = request.FILES.getlist("files")
     pages = load_files(files)
     qdrant.add_documents(pages)
 
     try:
         upsert_documents_to_qdrant(pages, collection_name=collection_name)
+        print("here---------")
         return Response(status=status.HTTP_200_OK)
     except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST)
