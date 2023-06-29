@@ -8,13 +8,15 @@ from langchain.vectorstores import Qdrant
 import docx2txt
 import fitz
 from hashlib import md5
-
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
+from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.docstore.document import Document
 from langchain.text_splitter import (
     RecursiveCharacterTextSplitter,
 )
-
+from .config import OPEN_AI_KEY
 from .sources import qdrant_client
 
 
@@ -148,8 +150,24 @@ def upsert_documents_to_qdrant(
         print(e)
 
 
-def generate_embeddings():
-    pass
+def load_chain(collection_name: str):
+    qdrant = Qdrant(
+        client=qdrant_client, collection_name=collection_name, embeddings=embedding
+    )
+    # construct a qa chain with customized llm and db
+    memory = ConversationBufferMemory(
+        memory_key="chat_history",
+        return_messages=True,
+        output_key="answer",
+    )
+
+    qa = ConversationalRetrievalChain.from_llm(
+        ChatOpenAI(openai_api_key=OPEN_AI_KEY, temperature=0),
+        qdrant.as_retriever(),
+        memory=memory,
+        return_source_documents=True,
+    )
+    return qa
 
 
 def format_source(source_documents: List[Document]):
@@ -159,3 +177,14 @@ def format_source(source_documents: List[Document]):
         res += f'   page: {doc.metadata["source"]} \n'
         res += f"   content: {doc.page_content} \n"
     return res
+
+
+def format_anwer(res):
+    ans = (
+        res["answer"]
+        + "\n"
+        + "----------------------------- SOURCRE -----------------------"
+        + "\n"
+        + format_source(res["source_documents"])
+    )
+    return ans

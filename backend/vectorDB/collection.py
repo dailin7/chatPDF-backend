@@ -18,7 +18,8 @@ def create_collection(request):
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
         )
         return Response(status=status.HTTP_201_CREATED)
-    except:
+    except Exception as e:
+        print(e)
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -37,7 +38,7 @@ def get_collection(request, collection_name: str):
     try:
         collection = qdrant_client.get_collection(collection_name=collection_name)
         return Response(collection, status=status.HTTP_200_OK)
-    except UnexpectedResponse:
+    except UnexpectedResponse as e:
         return Response(
             {"message": f"Collection '{collection_name}' does not exists!"},
             status=status.HTTP_400_BAD_REQUEST,
@@ -63,6 +64,7 @@ def delete_collection(request, collection_name: str):
 @api_view(["POST"])
 def upload_files(request, collection_name: str):
     try:
+        # TODO: upload filename to sqlite db
         qdrant = Qdrant(
             client=qdrant_client, collection_name=collection_name, embeddings=embedding
         )
@@ -82,3 +84,4 @@ def upload_files(request, collection_name: str):
         return Response(status=status.HTTP_200_OK)
     except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+    # reload qa chain
