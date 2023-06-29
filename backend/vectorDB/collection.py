@@ -8,6 +8,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from backend.utils import load_files, upsert_documents_to_qdrant
 from langchain.vectorstores import Qdrant
 
+#test comment
 
 @api_view(["POST"])
 def create_collection(request):
