@@ -23,13 +23,13 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("query/", hello.query),
     path("hello/", hello.hello),
-    path("collection/create", collection.create_collection),
-    path("collection/", collection.get_collections),
+    path("collection/create", collection.create_collection), #for creating vector db collection
+    path("collection/names", collection.get_names), #for retrieveing vector db collections' names
     path("collection/<str:collection_name>", collection.get_collection),
     path("collection/<str:collection_name>/delete", collection.delete_collection),
-    path("collection/<str:collection_name>/upload", collection.upload_files),
+    path("collection/<str:collection_name>/upload", collection.upload_files), #upload files to existing db collection
     path("user/create", user.create_user),
-    path("conversation/create", conversation.create_conversation),
+    path("conversation/create", conversation.create_conversation), #for creating conversation
     path("conversation/<str:user_id>", conversation.get_conversations_by_user_id),
     path("db_collection/create", db_collection.create_collection),
 ]
