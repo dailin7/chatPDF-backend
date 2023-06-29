@@ -8,7 +8,8 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from backend.utils import load_files, upsert_documents_to_qdrant
 from langchain.vectorstores import Qdrant
 
-#test comment
+# test comment
+
 
 @api_view(["POST"])
 def create_collection(request):
@@ -65,7 +66,6 @@ def delete_collection(request, collection_name: str):
 @api_view(["POST"])
 def upload_files(request, collection_name: str):
     try:
-        # TODO: upload filename to sqlite db
         qdrant = Qdrant(
             client=qdrant_client, collection_name=collection_name, embeddings=embedding
         )
@@ -74,14 +74,13 @@ def upload_files(request, collection_name: str):
             {"message": f"Collection '{collection_name}' does not exists!"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
     files = request.FILES.getlist("files")
     pages = load_files(files)
     qdrant.add_documents(pages)
 
     try:
         upsert_documents_to_qdrant(pages, collection_name=collection_name)
-        print("here---------")
         return Response(status=status.HTTP_200_OK)
     except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST)
