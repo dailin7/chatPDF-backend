@@ -17,11 +17,10 @@ class UserSerializer(serializers.ModelSerializer):
 class CollectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
-        fields = ["id", "collection_name", "user_id", "files"]
+        fields = ["id", "collection_name", "files"]
 
 
 class ConversationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Conversation
-        # fields = ["id", "conversation_name", "collection_id", "user_id"]
-        fields = ["id", "conversation_name", "user_id"]
+        fields = ["id", "conversation_name"]
