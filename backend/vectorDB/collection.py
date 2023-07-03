@@ -6,6 +6,7 @@ from qdrant_client.models import Distance, VectorParams
 from ..utils import load_files
 from qdrant_client.http.exceptions import UnexpectedResponse
 from backend.utils import load_files, upsert_documents_to_qdrant
+from backend.service.collection import add_filenames
 from langchain.vectorstores import Qdrant
 
 # test comment
@@ -21,7 +22,6 @@ def create_collection(request):
         )
         return Response(status=status.HTTP_201_CREATED)
     except Exception as e:
-        print(e)
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -75,7 +75,14 @@ def upload_files(request, collection_name: str):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # TODO: change duplicate files and ask for overwrite confirmation
     files = request.FILES.getlist("files")
+    filenames = [x.name for x in files]
+
+    # add filenames to collection model
+    add_filenames(collection_name, filenames)
+
+    # add files to vector db
     pages = load_files(files)
     qdrant.add_documents(pages)
 

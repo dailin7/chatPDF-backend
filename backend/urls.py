@@ -34,4 +34,5 @@ urlpatterns = [
     path("conversation/<str:conversation_id>", conversation.get_conversation),
     path("conversation/<str:conversation_name>/qa", conversation.get_answer),
     path("db_collection/create", db_collection.create_collection),
+    path("db_collection/get/<str:collection_name>", db_collection.get_collection),
 ]

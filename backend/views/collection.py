@@ -14,3 +14,11 @@ def create_collection(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+def get_collection(request, collection_name: str):
+    # TODO: get by id instead of name
+    collection = Collection.objects.get(collection_name=collection_name)
+    serializer = CollectionSerializer(collection)
+    return Response(serializer.data, status=status.HTTP_200_OK)
