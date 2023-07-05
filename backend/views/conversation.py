@@ -5,16 +5,20 @@ from ..serializers import ConversationSerializer
 from ..models.models import Conversation
 from ..utils import load_chain, format_anwer
 from ..sources import qa
-from ..service.conversation import create_conversation, update_conversation_history
-from ..service.collection import create_collection
+from ..service.conversation import (
+    create_conversation as createConversation,
+    update_conversation_history,
+)
+from ..service.collection import create_collection, delete_collection
 import uuid
 
 
 @api_view(["POST"])
 def create_conversation(request):
     try:
-        res = create_conversation(request.data)
-        create_collection(request.data)
+        res = createConversation(request.data)
+        name = request.data["conversation_name"]
+        create_collection(name)
         return Response(res, status=status.HTTP_201_CREATED)
     except:
         return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -65,10 +69,8 @@ def get_answer(request, conversation_name: str):
 
 @api_view(["DELETE"])
 def delete_conversation(request, conversation_id: str):
-    try:
-        conversation_id = uuid.UUID(conversation_id)
-        conversation = Conversation.objects.get(id=conversation_id)
-        conversation.delete()
-        return Response(status=status.HTTP_200_OK)
-    except:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+    conversation_id = uuid.UUID(conversation_id)
+    conversation = Conversation.objects.get(id=conversation_id)
+    conversation.delete()
+    delete_collection(collection_name=conversation.conversation_name)
+    return Response(status=status.HTTP_200_OK)

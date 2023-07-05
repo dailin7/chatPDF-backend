@@ -30,9 +30,12 @@ urlpatterns = [
     path("collection/<str:collection_name>/upload", collection.upload_files),
     path("user/create", user.create_user),
     path("conversation/create", conversation.create_conversation),
+    path("conversation/delete/<str:conversation_id>", conversation.delete_conversation),
     path("conversation/", conversation.get_conversations),
     path("conversation/<str:conversation_name>", conversation.get_conversation),
     path("conversation/<str:conversation_name>/qa", conversation.get_answer),
     # path("db_collection/create", db_collection.create_collection),
     path("db_collection/get/<str:collection_name>", db_collection.get_collection),
+    path("db_collection/get", db_collection.get_collections),
+    path("db_collection/delete/<str:collection_name>", db_collection.delete_collection),
 ]

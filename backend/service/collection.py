@@ -4,17 +4,20 @@ from ..serializers import CollectionSerializer
 from django.core.exceptions import ValidationError
 from backend.sources import qdrant_client, embedding
 from qdrant_client.models import Distance, VectorParams
+from django.http.request import QueryDict
 
 
-def create_collection(data) -> None:
-    serializer = CollectionSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-    else:
-        raise ValidationError("Invalid data")
+def create_collection(collection_name: str) -> None:
+    collection, created = Collection.objects.update_or_create(
+        collection_name=collection_name
+    )
+    # serializer = CollectionSerializer(data=c)
+    # if serializer.is_valid():
+    #     serializer.save()
+    # else:
+    #     raise ValidationError("Invalid data")
 
     # create collection also in qdrant db
-    collection_name = data["collection_name"]
     try:
         qdrant_client.recreate_collection(
             collection_name=collection_name,
@@ -22,7 +25,22 @@ def create_collection(data) -> None:
         )
     except Exception as e:
         raise ValidationError("Unable to create collection in qdrant db")
-    return serializer.data
+    return collection
+
+
+def delete_collection(collection_name: str) -> None:
+    # try:
+    collections = Collection.objects.filter(collection_name=collection_name)
+    if collections.count() != 0:
+        collections.delete()
+    else:
+        Warning("Collection not found in db")
+    # except Exception as e:
+    #     raise ValidationError("Unable to delete collection in db")
+    try:
+        qdrant_client.delete_collection(collection_name=collection_name)
+    except Exception as e:
+        raise ValidationError("Unable to delete collection in qdrant db")
 
 
 def add_filenames(collection_name: str, filenames: List[str]) -> None:
