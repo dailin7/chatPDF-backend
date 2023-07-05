@@ -42,11 +42,9 @@ def get_conversations(request):
 
 
 @api_view(["GET"])
-def get_conversation(request, conversation_id: str):
+def get_conversation(request, conversation_name: str):
     # try:
-    conversation_id = uuid.UUID(conversation_id)
-    conversation = Conversation.objects.get(id=conversation_id)
-    conversation_name = conversation.conversation_name
+    conversation = Conversation.objects.get(conversation_name=conversation_name)
     # Load qa chain
     qa[conversation_name] = load_chain(collection_name=conversation_name)
     serializer = ConversationSerializer(conversation)
@@ -57,12 +55,12 @@ def get_conversation(request, conversation_id: str):
 def get_answer(request, conversation_name: str):
     res = qa[conversation_name]({"question": request.data["question"]})
     # TODO: save q & a to db
-    try:
-        update_conversation_history(conversation_name, request.data["question"], res)
-        return Response(format_anwer(res), status=status.HTTP_200_OK)
-    except:
-        print("Cannot save conversation history")
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+    # try:
+    update_conversation_history(conversation_name, request.data["question"], res)
+    return Response(format_anwer(res), status=status.HTTP_200_OK)
+    # except:
+    #     print("Cannot save conversation history")
+    #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["DELETE"])
