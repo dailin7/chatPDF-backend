@@ -68,9 +68,8 @@ def get_answer(request, conversation_name: str):
 
 
 @api_view(["DELETE"])
-def delete_conversation(request, conversation_id: str):
-    conversation_id = uuid.UUID(conversation_id)
-    conversation = Conversation.objects.get(id=conversation_id)
+def delete_conversation(request, conversation_name: str):
+    conversation = Conversation.objects.get(conversation_name=conversation_name)
     conversation.delete()
-    delete_collection(collection_name=conversation.conversation_name)
+    delete_collection(collection_name=conversation_name)
     return Response(status=status.HTTP_200_OK)
