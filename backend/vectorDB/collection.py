@@ -12,6 +12,7 @@ from langchain.vectorstores import Qdrant
 # test comment
 
 
+@DeprecationWarning
 @api_view(["POST"])
 def create_collection(request):
     try:

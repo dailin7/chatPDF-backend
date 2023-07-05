@@ -6,6 +6,7 @@ from ..models.models import Collection
 import uuid
 
 
+@DeprecationWarning
 @api_view(["POST"])
 def create_collection(request):
     serializer = CollectionSerializer(data=request.data)

@@ -23,7 +23,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("query/", hello.query),
     path("hello/", hello.hello),
-    path("collection/create", collection.create_collection),
+    # path("collection/create", collection.create_collection),
     path("collection/names", collection.get_names),
     path("collection/<str:collection_name>", collection.get_collection),
     path("collection/<str:collection_name>/delete", collection.delete_collection),
@@ -33,6 +33,6 @@ urlpatterns = [
     path("conversation/", conversation.get_conversations),
     path("conversation/<str:conversation_id>", conversation.get_conversation),
     path("conversation/<str:conversation_name>/qa", conversation.get_answer),
-    path("db_collection/create", db_collection.create_collection),
+    # path("db_collection/create", db_collection.create_collection),
     path("db_collection/get/<str:collection_name>", db_collection.get_collection),
 ]
