@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from ..serializers import ConversationSerializer
 from ..models.models import Conversation
-from ..utils import load_chain, format_anwer
+from ..utils import load_chain, format_answer
 from ..sources import qa
 from ..service.conversation import (
     create_conversation as createConversation,
@@ -55,13 +55,13 @@ def get_conversation(request, conversation_name: str):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 def get_answer(request, conversation_name: str):
     res = qa[conversation_name]({"question": request.data["question"]})
     # TODO: save q & a to db
     # try:
     update_conversation_history(conversation_name, request.data["question"], res)
-    return Response(format_anwer(res), status=status.HTTP_200_OK)
+    return Response(format_answer(res), status=status.HTTP_200_OK)
     # except:
     #     print("Cannot save conversation history")
     #     return Response(status=status.HTTP_400_BAD_REQUEST)
