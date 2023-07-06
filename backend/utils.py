@@ -179,12 +179,19 @@ def format_source(source_documents: List[Document]):
     return res
 
 
-def format_anwer(res):
-    ans = (
-        res["answer"]
-        + "\n"
-        + "----------------------------- SOURCRE -----------------------"
-        + "\n"
-        + format_source(res["source_documents"])
-    )
+# def format_answer(res):
+#     ans = (
+#         res["answer"]
+#         + "\n"
+#         + "----------------------------- SOURCRE -----------------------"
+#         + "\n"
+#         + format_source(res["source_documents"])
+#     )
+#     return ans
+
+def format_answer(res):
+    ans = {
+        "answer": res["answer"],
+        "source": format_source(res["source_documents"])
+    }
     return ans
