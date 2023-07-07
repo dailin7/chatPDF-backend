@@ -57,7 +57,14 @@ def get_conversation(request, conversation_name: str):
 
 @api_view(["POST"])
 def get_answer(request, conversation_name: str):
-    res = qa[conversation_name]({"question": request.data["question"]})
+    chat_history = []
+    res = qa[conversation_name](
+        {
+            "question": request.data["question"],
+            "chat_history": chat_history,
+            # "vectordbkwargs": {"search_distance": 0.8},
+        }
+    )
     # TODO: save q & a to db
     # try:
     update_conversation_history(conversation_name, request.data["question"], res)

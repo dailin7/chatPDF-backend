@@ -41,20 +41,20 @@ def load_files(files) -> List[Document]:
 
 def load_pdf(file):
     pdf = parse_pdf(file)
-    loader = text_to_docs(pdf, file.name, 3000)
+    loader = text_to_docs(pdf, file.name, 1500)
     return loader
 
 
 def load_docx(file):
     extracted_text = docx2txt.process(file)
     txt = parse_txt(extracted_text)
-    loader = text_to_docs(txt, file.name, 1000)
+    loader = text_to_docs(txt, file.name, 1500)
     return loader
 
 
 def load_txt(file):
     txt = parse_txt(file)
-    loader = text_to_docs(txt, file.name, 1000)
+    loader = text_to_docs(txt, file.name, 1500)
     return loader
 
 
@@ -103,7 +103,7 @@ def text_to_docs(text: str, file_name: str, chunk_size: int) -> List[Document]:
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],
-            chunk_overlap=0,
+            chunk_overlap=100,
         )
         chunks = text_splitter.split_text(doc.page_content)
         for i, chunk in enumerate(chunks):
@@ -163,7 +163,7 @@ def load_chain(collection_name: str):
 
     qa = ConversationalRetrievalChain.from_llm(
         ChatOpenAI(openai_api_key=OPEN_AI_KEY, temperature=0),
-        qdrant.as_retriever(),
+        qdrant.as_retriever(search_kwargs={"k": 2}),
         memory=memory,
         return_source_documents=True,
     )
@@ -189,9 +189,7 @@ def format_source(source_documents: List[Document]):
 #     )
 #     return ans
 
+
 def format_answer(res):
-    ans = {
-        "answer": res["answer"],
-        "source": format_source(res["source_documents"])
-    }
+    ans = {"answer": res["answer"], "source": format_source(res["source_documents"])}
     return ans
