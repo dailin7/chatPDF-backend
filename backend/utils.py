@@ -9,13 +9,14 @@ import docx2txt
 import fitz
 from hashlib import md5
 from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferMemory, ConversationBufferWindowMemory
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.docstore.document import Document
 from langchain.text_splitter import (
     RecursiveCharacterTextSplitter,
 )
+from langchain.prompts.prompt import PromptTemplate
 from .config import OPEN_AI_KEY
 from .sources import qdrant_client
 
@@ -41,20 +42,20 @@ def load_files(files) -> List[Document]:
 
 def load_pdf(file):
     pdf = parse_pdf(file)
-    loader = text_to_docs(pdf, file.name, 1500)
+    loader = text_to_docs(pdf, file.name, 1000)
     return loader
 
 
 def load_docx(file):
     extracted_text = docx2txt.process(file)
     txt = parse_txt(extracted_text)
-    loader = text_to_docs(txt, file.name, 1500)
+    loader = text_to_docs(txt, file.name, 1000)
     return loader
 
 
 def load_txt(file):
     txt = parse_txt(file)
-    loader = text_to_docs(txt, file.name, 1500)
+    loader = text_to_docs(txt, file.name, 1000)
     return loader
 
 
@@ -103,7 +104,7 @@ def text_to_docs(text: str, file_name: str, chunk_size: int) -> List[Document]:
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],
-            chunk_overlap=100,
+            chunk_overlap=0,
         )
         chunks = text_splitter.split_text(doc.page_content)
         for i, chunk in enumerate(chunks):
@@ -162,11 +163,18 @@ def load_chain(collection_name: str):
     )
 
     qa = ConversationalRetrievalChain.from_llm(
-        ChatOpenAI(openai_api_key=OPEN_AI_KEY, temperature=0),
-        qdrant.as_retriever(search_kwargs={"k": 2}),
+        ChatOpenAI(
+            model_name="gpt-3.5-turbo-16k", openai_api_key=OPEN_AI_KEY, temperature=0
+        ),
+        qdrant.as_retriever(search_type="mmr", search_kwargs={"k": 5}),
         memory=memory,
+        verbose=True,
         return_source_documents=True,
+        # combine_docs_chain_kwargs={
+        #     "prompt": PromptTemplate.from_template("output in Chinese")
+        # },
     )
+
     return qa
 
 
